@@ -89,12 +89,8 @@
     filter: drop-shadow(0 0 3px color-mix(in oklab, var(--accent) 40%, transparent));
     overflow:auto;
     min-height:56px;
-  }
-  /* New robust mask for mobile Safari */
-  .mask{
-    color: transparent !important;
-    text-shadow: 0 0 10px color-mix(in oklab, var(--accent) 50%, transparent);
-    -webkit-text-security: disc; /* Safari fallback */
+    white-space:pre-wrap;
+    word-break:break-all;
   }
   .toast{position:fixed; right:12px; bottom:12px; background:#111; border:1px solid var(--accent); padding:10px 14px; border-radius:8px; opacity:0; transform:translateY(8px); transition:.2s}
   .toast.show{opacity:1; transform:translateY(0)}
@@ -276,7 +272,7 @@
         </div>
 
         <div class="out">
-          <div id="pw" class="password mask" title="Output">••••••••••••••••••••</div>
+          <div id="pw" class="password" title="Output"></div>
           <div style="display:flex; flex-direction:column; gap:8px">
             <button class="btn" id="gen">Generate</button>
             <button class="btn secondary" id="copy">Copy</button>
@@ -350,6 +346,9 @@
     presetBar: $('#presetBar'), favBtn: $('#favPresetBtn')
   };
 
+  // Local UI state
+  const state = { reveal: false, plain: '' };
+
   // Theme persistence
   const theme = localStorage.getItem('pf_theme') || 'amber';
   setTheme(theme);
@@ -375,7 +374,7 @@
   function tick(){ els.clock.textContent = fmtClock(new Date()); }
   tick(); setInterval(tick, 1000);
 
-  // Mode switching (preserve reveal state)
+  // Mode switching
   els.modeRadios.forEach(r => r.addEventListener('change', updateModeUI));
   function getMode(){ return [...els.modeRadios].find(r=>r.checked)?.value || 'password'; }
   function updateModeUI(){
@@ -383,6 +382,7 @@
     els.passwordOptions.hidden = m !== 'password';
     els.uuidOptions.hidden = m !== 'uuid';
     els.wordsOptions.hidden = m !== 'words';
+    renderOut(); // preserve reveal state
   }
   updateModeUI();
 
@@ -508,34 +508,34 @@
     return out;
   }
 
+  // Rendering helpers
+  function renderOut(){
+    const plain = state.plain || '';
+    els.pw.textContent = state.reveal ? plain : '*'.repeat(plain.length || 12);
+  }
+
   function generate(){
     const m = getMode();
-    let out = '—';
-    if(m==='password') out = genPassword();
-    else if(m==='uuid') out = genUUID();
-    else if(m==='words') out = genWords();
-    els.pw.textContent = out;
-    if(els.reveal.dataset.state!=='show'){ els.pw.classList.add('mask'); }
+    if(m==='password') state.plain = genPassword();
+    else if(m==='uuid') state.plain = genUUID();
+    else if(m==='words') state.plain = genWords();
+    renderOut();
   }
 
   // Buttons
   $('#gen').addEventListener('click', generate);
-  // Initialise reveal to hide
-  els.reveal.dataset.state = 'hide';
-  els.reveal.textContent = 'Show';
-  els.reveal.setAttribute('aria-pressed','false');
-  els.pw.classList.add('mask');
   $('#reveal').addEventListener('click', () => {
-    const showing = els.reveal.dataset.state === 'show';
-    const next = showing ? 'hide' : 'show';
-    els.reveal.dataset.state = next;
-    els.reveal.textContent = next === 'show' ? 'Hide' : 'Show';
-    els.reveal.setAttribute('aria-pressed', String(next==='show'));
-    els.pw.classList.toggle('mask', next!=='show');
+    state.reveal = !state.reveal;
+    els.reveal.textContent = state.reveal ? 'Hide' : 'Show';
+    els.reveal.setAttribute('aria-pressed', String(state.reveal));
+    renderOut();
   });
   function toast(msg){ els.toast.textContent = msg; els.toast.classList.add('show'); setTimeout(()=>els.toast.classList.remove('show'),1500); }
   $('#copy').addEventListener('click', async () => {
-    try{ await navigator.clipboard.writeText(els.pw.textContent); toast('Copied to clipboard'); }catch(e){ toast('Clipboard unavailable'); }
+    try{
+      await navigator.clipboard.writeText(state.plain || '');
+      toast('Copied to clipboard');
+    }catch(e){ toast('Clipboard unavailable'); }
   });
 
   // Actors UI (cowboy/tumbleweed presence & animation)
@@ -594,6 +594,10 @@
   els.animToggle.checked ? startAnim() : stopAnim();
 
   // Initial output
+  // Seed with a first value for correct masked length
+  state.reveal = false;
+  els.reveal.textContent = 'Show';
+  els.reveal.setAttribute('aria-pressed','false');
   generate();
 })();
 </script>
