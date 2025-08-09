@@ -32,3 +32,4 @@ git push -u origin main
 - No build step or frameworks required; one static HTML file is enough.
 - Works offline; uses `crypto.getRandomValues` where available.
 - Mobile optimisations included: larger tap targets, full‑width sliders, sticky header, and scaled animations.
+https://y2pm.github.io/password-foundry/
