@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -89,7 +90,12 @@
     overflow:auto;
     min-height:56px;
   }
-  .mask{filter: blur(4px);}
+  /* New robust mask for mobile Safari */
+  .mask{
+    color: transparent !important;
+    text-shadow: 0 0 10px color-mix(in oklab, var(--accent) 50%, transparent);
+    -webkit-text-security: disc; /* Safari fallback */
+  }
   .toast{position:fixed; right:12px; bottom:12px; background:#111; border:1px solid var(--accent); padding:10px 14px; border-radius:8px; opacity:0; transform:translateY(8px); transition:.2s}
   .toast.show{opacity:1; transform:translateY(0)}
 
@@ -274,7 +280,7 @@
           <div style="display:flex; flex-direction:column; gap:8px">
             <button class="btn" id="gen">Generate</button>
             <button class="btn secondary" id="copy">Copy</button>
-            <button class="btn secondary" id="reveal">Show</button>
+            <button class="btn secondary" id="reveal" aria-pressed="false">Show</button>
           </div>
         </div>
         <div class="footer-note muted">Runs entirely in your browser; nothing is sent anywhere.</div>
@@ -514,11 +520,18 @@
 
   // Buttons
   $('#gen').addEventListener('click', generate);
+  // Initialise reveal to hide
+  els.reveal.dataset.state = 'hide';
+  els.reveal.textContent = 'Show';
+  els.reveal.setAttribute('aria-pressed','false');
+  els.pw.classList.add('mask');
   $('#reveal').addEventListener('click', () => {
-    const s = els.reveal.dataset.state === 'show' ? 'hide' : 'show';
-    els.reveal.dataset.state = s;
-    els.reveal.textContent = s==='show' ? 'Hide' : 'Show';
-    els.pw.classList.toggle('mask', s!=='show');
+    const showing = els.reveal.dataset.state === 'show';
+    const next = showing ? 'hide' : 'show';
+    els.reveal.dataset.state = next;
+    els.reveal.textContent = next === 'show' ? 'Hide' : 'Show';
+    els.reveal.setAttribute('aria-pressed', String(next==='show'));
+    els.pw.classList.toggle('mask', next!=='show');
   });
   function toast(msg){ els.toast.textContent = msg; els.toast.classList.add('show'); setTimeout(()=>els.toast.classList.remove('show'),1500); }
   $('#copy').addEventListener('click', async () => {
